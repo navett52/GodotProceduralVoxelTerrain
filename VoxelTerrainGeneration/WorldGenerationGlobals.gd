@@ -3,7 +3,7 @@ extends Node
 var TilePosClass = load("res://VoxelTerrainGeneration/TilePos.gd")
 var BlockClass = load("res://VoxelTerrainGeneration/Block.gd")
 
-const CHUNK_WIDTH = 10
+const CHUNK_WIDTH = 5
 const CHUNK_HEIGHT = 64
 
 enum Tile {DIRT, GRASS, GRASS_SIDE, STONE, TREE_SIDE, TREE_CX, LEAVES}

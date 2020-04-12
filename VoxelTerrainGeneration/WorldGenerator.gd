@@ -3,9 +3,6 @@ extends Node
 # Need a chunk
 var ChunkClass = load("res://VoxelTerrainGeneration/Chunk.gd")
 var terrainChunk # mayhaps this should really be the MeshInstance object. We'll see.
-var thread
-var sem = Semaphore.new()
-signal finished
 
 # Get the player; In this case a camera node
 var player = Camera
@@ -16,7 +13,11 @@ var chunks = {}
 
 # Noise
 var noise = OpenSimplexNoise.new()
-const genSeed = 10
+const genSeed = 10.0
+export var genOctaves = 3.0
+export var genPeriod = 64.0
+export var genPersistence = 0.5
+export var genLacunarity = 2.0
 
 # Distance chunks load from player
 export var chunkDistance = 5
@@ -29,7 +30,7 @@ var chunksToGen = []
 
 func _ready():
 	world = get_node(".")
-	player = get_node("Camera")
+	player = get_node("Player")
 	noise.seed = genSeed
 	loadChunks(true)
 
@@ -107,6 +108,11 @@ func buildChunk(posX, posZ):
 	chunks[Vector2(posX, posZ)] = chunk
 
 func getBlockType(x, y, z):
+	# These are the noise variable sto tweak to get different terrain effects.
+	noise.octaves = genOctaves
+	noise.period = genPeriod
+	noise.persistence = genPersistence
+	noise.lacunarity = genLacunarity
 	var surfacePass1 = noise.get_noise_2d(x, z) * 10
 	var surfacePass2 = noise.get_noise_2d(x, z) * 10 * (noise.get_noise_2d(x, z) + .5)
 	

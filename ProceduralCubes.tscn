@@ -7,11 +7,8 @@
 
 [node name="Spatial" type="Spatial"]
 script = ExtResource( 1 )
-
-[node name="Camera" type="Camera" parent="."]
-transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 40.1802, 0 )
-script = ExtResource( 2 )
-max_speed = Vector3( 10, 10, 10 )
+genPersistence = 100.0
+genLacunarity = 3.0
 
 [node name="OmniLight" type="OmniLight" parent="."]
 transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 68.2412, 0 )
@@ -23,3 +20,7 @@ omni_range = 151.874
 transform = Transform( 4.23773, 0, 0, 0, 1, 0, 0, 0, 4.23773, 0, -4.18942, 0 )
 mesh = SubResource( 1 )
 material/0 = null
+
+[node name="Player" type="Camera" parent="."]
+transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 65.2815, 0 )
+script = ExtResource( 2 )

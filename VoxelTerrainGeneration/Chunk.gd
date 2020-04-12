@@ -119,6 +119,7 @@ func buildMesh():
 	st.generate_normals()
 	
 	self.mesh = st.commit()
+	self.create_trimesh_collision()
 
 func addQuad(point1, point2, point3, point4):
 	var vertexIndexOne = -1

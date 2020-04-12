@@ -1,11 +1,8 @@
 extends Node
 
 # Need a chunk
-var ChunkClass = load("res://Chunk.gd")
+var ChunkClass = load("res://VoxelTerrainGeneration/Chunk.gd")
 var terrainChunk # mayhaps this should really be the MeshInstance object. We'll see.
-var thread
-var sem = Semaphore.new()
-signal finished
 
 # Get the player; In this case a camera node
 var player = Camera
@@ -16,20 +13,24 @@ var chunks = {}
 
 # Noise
 var noise = OpenSimplexNoise.new()
-const genSeed = 10
+const genSeed = 10.0
+export var genOctaves = 3.0
+export var genPeriod = 64.0
+export var genPersistence = 0.5
+export var genLacunarity = 2.0
 
 # Distance chunks load from player
 export var chunkDistance = 5
 
-# List of pooled chunks (For what? Deletion? Loading?)
-var pooledChunks = []
+# List of chunks that have already been generated, so they can be swapped in faster
+var pooledChunks = {}
 
 # List of chunk positions for chunks to generate
 var chunksToGen = []
 
 func _ready():
 	world = get_node(".")
-	player = get_node("Camera")
+	player = get_node("Player")
 	noise.seed = genSeed
 	loadChunks(true)
 
@@ -58,7 +59,6 @@ func loadChunks(immediate = false):
 				var cp = Vector2(i, j)
 				
 				if !(chunks.has(cp)) && !(chunksToGen.has(cp)):
-					print(str(i) + ", " + str(j))
 					if immediate:
 						buildChunk(i, j)
 					else:
@@ -81,39 +81,38 @@ func loadChunks(immediate = false):
 		
 		for chunkPos in chunksToDestroy:
 			world.remove_child(chunks[chunkPos])
-			pooledChunks.append(chunks[chunkPos])
+			pooledChunks[chunkPos] = chunks[chunkPos]
 			chunks.erase(chunkPos)
 		
 		call_deferred("delayBuildChunks")
-#		yield(self, "finished")
 
 func buildChunk(posX, posZ):
 	var chunk = ChunkClass.new()
 	
-	# I believe this is looping through the chunk
-	for x in range(WorldGenerationGlobals.CHUNK_WIDTH + 2):
-		for z in range(WorldGenerationGlobals.CHUNK_WIDTH + 2):
-			for y in range(WorldGenerationGlobals.CHUNK_HEIGHT):
-				chunk.blocks[chunk._blocksKey(x, y, z)] = getBlockType(posX + x - 1, y, posZ + z - 1)
+	if pooledChunks.has(Vector2(posX, posZ)):
+		chunk = pooledChunks[Vector2(posX, posZ)]
+		world.add_child(chunk)
+		pooledChunks.erase(chunk)
+		chunk.global_transform.origin = Vector3(posX, 0, posZ)
+	else:
+		world.add_child(chunk)
+		chunk.global_transform.origin = Vector3(posX, 0, posZ)
+		# I believe this is looping through the chunk
+		for x in range(WorldGenerationGlobals.CHUNK_WIDTH + 2):
+			for z in range(WorldGenerationGlobals.CHUNK_WIDTH + 2):
+				for y in range(WorldGenerationGlobals.CHUNK_HEIGHT):
+					chunk.blocks[chunk._blocksKey(x, y, z)] = getBlockType(posX + x - 1, y, posZ + z - 1)
+		# TODO: Generate trees eventually
+		chunk.buildMesh()
 	
-	world.add_child(chunk)
-	chunk.global_transform.origin = Vector3(posX, 0, posZ)
-	
-#	if pooledChunks.size() > 0:
-#		chunk = pooledChunks[0]
-#		world.add_child(chunk)
-#		pooledChunks.erase(chunk)
-#		chunk.global_transform.origin = Vector3(posX, 0, posZ)
-#	else:
-#		world.add_child(chunk)
-#		chunk.global_transform.origin = Vector3(posX, 0, posZ)
-	
-	# TODO: Generate trees eventually
-	
-	chunk.buildMesh()
 	chunks[Vector2(posX, posZ)] = chunk
 
 func getBlockType(x, y, z):
+	# These are the noise variable sto tweak to get different terrain effects.
+	noise.octaves = genOctaves
+	noise.period = genPeriod
+	noise.persistence = genPersistence
+	noise.lacunarity = genLacunarity
 	var surfacePass1 = noise.get_noise_2d(x, z) * 10
 	var surfacePass2 = noise.get_noise_2d(x, z) * 10 * (noise.get_noise_2d(x, z) + .5)
 	
@@ -135,5 +134,4 @@ func delayBuildChunks():
 		buildChunk(chunksToGen[0].x, chunksToGen[0].y)
 		chunksToGen.remove(0)
 		
-		yield(get_tree().create_timer(.1), "timeout")
-#		emit_signal("finished")
+		yield(get_tree().create_timer(.2), "timeout")
